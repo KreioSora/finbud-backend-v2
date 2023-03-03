@@ -26,6 +26,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Service
 @AllArgsConstructor
 public class TransactionService {
@@ -44,8 +47,16 @@ public class TransactionService {
     public ResponseEntity<AppResponse> dashboard(Integer page, Integer pageSize, String dateQuery, Long accountId) {
         try {
             Pageable pageable = PageRequest.of(page, pageSize, Sort.by("created_at").descending());
-            Page<Transactions> transactions = transactionsRepository.findAllByUser_UsernameAndAccount_Id(userService.getAuthenticatedUser().getUsername(), accountId, pageable)
-                    .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+            User user = userService.getAuthenticatedUser();
+            Page<Transactions> transactions;
+            if (dateQuery == null) {
+                transactions = transactionsRepository.findAllByUser_UsernameAndAccount_Id(user.getUsername(), accountId, pageable)
+                        .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+            } else {
+                OffsetDateTime query = OffsetDateTime.parse(dateQuery, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                transactions = transactionsRepository.findAllByUser_UsernameAndAccount_IdAndCreatedAtAfter(user.getUsername(), accountId, query, pageable)
+                        .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+            }
             return mainResponse.success(transactions);
         } catch (RuntimeException e) {
             return mainResponse.clientError(e.getMessage(), accountId);
