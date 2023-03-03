@@ -1,10 +1,8 @@
 package com.project.backend.transactions.controller;
 
 import com.project.backend.common.models.AppResponse;
-import com.project.backend.savings.models.requests.AccountCreateRequest;
-import com.project.backend.savings.models.requests.AccountUpdateRequest;
-import com.project.backend.savings.service.SavingsAccountService;
 import com.project.backend.transactions.models.requests.TransactionCreateRequest;
+import com.project.backend.transactions.models.requests.TransactionUpdateRequest;
 import com.project.backend.transactions.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -38,15 +36,17 @@ public class TransactionsController {
         return transactionService.createTransaction(idAccount, request);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<AppResponse> updateTransaction(@PathVariable Long id,
+    @PutMapping("/{idAccount}/transactions/{idTransact}")
+    public ResponseEntity<AppResponse> updateTransaction(@PathVariable Long idAccount,
+                                                         @PathVariable String idTransact,
                                                          @RequestBody TransactionUpdateRequest request) {
-        return transactionService.updateTransaction(id, request);
+        return transactionService.updateTransaction(idAccount, idTransact, request);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<AppResponse> deleteTransaction(@PathVariable Long id) {
-        return transactionService.deleteTransaction(id);
+    @DeleteMapping("/{idAccount}/transactions/{idTransact}")
+    public ResponseEntity<AppResponse> deleteTransaction(@PathVariable Long idAccount,
+                                                         @PathVariable String idTransact) {
+        return transactionService.deleteTransaction(idAccount, idTransact);
     }
 
 }

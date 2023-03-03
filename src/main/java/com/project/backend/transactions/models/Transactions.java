@@ -42,6 +42,8 @@ public class Transactions {
 
     private boolean isDeleted = false;
 
+    private OffsetDateTime updatedAt;
+
     private OffsetDateTime createdAt;
 
 }

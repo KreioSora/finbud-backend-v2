@@ -14,8 +14,12 @@ import lombok.NoArgsConstructor;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class TransactionUpdateRequest {
 
+    private Long pocketId;
+
     private String currency;
 
     private Double amount;
+
+    private Integer type;
 
 }

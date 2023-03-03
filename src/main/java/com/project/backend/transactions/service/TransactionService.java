@@ -1,24 +1,20 @@
 package com.project.backend.transactions.service;
 
-import com.project.backend.common.exceptions.ValidationException;
 import com.project.backend.common.models.AppResponse;
 import com.project.backend.common.response.MainResponse;
-import com.project.backend.savings.converter.SavingsPocketConverter;
+import com.project.backend.common.validation.Validation;
 import com.project.backend.savings.models.SavingsAccount;
 import com.project.backend.savings.models.SavingsPockets;
-import com.project.backend.savings.models.requests.PocketCreateRequest;
-import com.project.backend.savings.models.requests.PocketUpdateRequest;
 import com.project.backend.savings.repository.SavingsAccountRepository;
 import com.project.backend.savings.repository.SavingsPocketsRepository;
 import com.project.backend.savings.service.SavingsAccountService;
 import com.project.backend.savings.service.SavingsPocketService;
-import com.project.backend.savings.validation.pockets.CreatePocketValidator;
-import com.project.backend.savings.validation.pockets.UpdatePocketValidator;
 import com.project.backend.transactions.converter.TransactionConverter;
 import com.project.backend.transactions.models.Transactions;
 import com.project.backend.transactions.models.requests.TransactionCreateRequest;
+import com.project.backend.transactions.models.requests.TransactionUpdateRequest;
 import com.project.backend.transactions.repository.TransactionsRepository;
-import com.project.backend.transactions.validation.CreateTransactionValidator;
+import com.project.backend.transactions.validation.TransactionValidator;
 import com.project.backend.user.UserService;
 import com.project.backend.user.models.User;
 import jakarta.persistence.EntityNotFoundException;
@@ -29,24 +25,23 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.BeanPropertyBindingResult;
-import org.springframework.validation.Errors;
 
 @Service
 @AllArgsConstructor
 public class TransactionService {
 
+    private final Validation validation;
     private final UserService userService;
+    private final MainResponse mainResponse;
     private final SavingsPocketService pocketService;
     private final SavingsAccountService accountService;
-    private final MainResponse mainResponse;
     private final TransactionConverter transactionConverter;
+    private final TransactionValidator transactionValidator;
     private final TransactionsRepository transactionsRepository;
     private final SavingsPocketsRepository savingsPocketsRepository;
     private final SavingsAccountRepository savingsAccountRepository;
-    private final CreateTransactionValidator createTransactionValidator;
 
-    public ResponseEntity<AppResponse> dashboard(Integer page, Integer pageSize, String query, Long accountId) {
+    public ResponseEntity<AppResponse> dashboard(Integer page, Integer pageSize, String dateQuery, Long accountId) {
         try {
             Pageable pageable = PageRequest.of(page, pageSize, Sort.by("created_at").descending());
             Page<Transactions> transactions = transactionsRepository.findAllByUser_UsernameAndAccount_Id(userService.getAuthenticatedUser().getUsername(), accountId, pageable)
@@ -73,21 +68,19 @@ public class TransactionService {
 
     public ResponseEntity<AppResponse> createTransaction(Long idAccount, TransactionCreateRequest request) {
         try {
-            Errors validation = new BeanPropertyBindingResult(request, "Create Transaction Request");
-            createTransactionValidator.validate(request, validation);
-            if (validation.hasErrors()) throw new ValidationException("Invalid Request", validation);
+            validation.validateRequest(request, "Create Transaction Request", transactionValidator);
             User user = userService.getAuthenticatedUser();
             SavingsAccount account = savingsAccountRepository.findByIdAndUser_Username(idAccount, user.getUsername())
                     .orElseThrow(() -> new EntityNotFoundException("Account not found"));
             SavingsPockets pocket = null;
-            if (request.getPocketId() != null ) {
-                pocket = savingsPocketsRepository.findByUser_UsernameAndAccount_IdAndId(user.getUsername(), request.getAccountId(), request.getPocketId())
+            if (request.getPocketId() != null) {
+                pocket = savingsPocketsRepository.findByUser_UsernameAndAccount_IdAndId(user.getUsername(), idAccount, request.getPocketId())
                         .orElseThrow(() -> new EntityNotFoundException("Pocket not found"));
             }
             Transactions transaction = transactionConverter.createTransactionConverter(request, user, account, pocket);
             transaction = transactionsRepository.save(transaction);
             updateAccountAndPocket(account, pocket, request.getAmount() * request.getType().doubleValue());
-            return mainResponse.success(pocket);
+            return mainResponse.success(transaction);
         } catch (RuntimeException e) {
             return mainResponse.clientError(e.getMessage(), request);
         } catch (Exception e) {
@@ -95,52 +88,40 @@ public class TransactionService {
         }
     }
 
-    public ResponseEntity<AppResponse> updatePocket(Long idAccount, Long idPocket, PocketUpdateRequest request) {
+    public ResponseEntity<AppResponse> updateTransaction(Long idAccount, String idTransact, TransactionUpdateRequest request) {
         try {
-            Errors validation = new BeanPropertyBindingResult(request, "Update Pocket Request");
-            createPocketValidator.validate(request, validation);
-            if (validation.hasErrors()) throw new ValidationException("Invalid Request", validation);
+            validation.validateRequest(request, "Update Transaction Reqeust", transactionValidator);
             User user = userService.getAuthenticatedUser();
             SavingsAccount account = savingsAccountRepository.findByIdAndUser_Username(idAccount, user.getUsername())
                     .orElseThrow(() -> new EntityNotFoundException("Account not found"));
-            SavingsPockets pocket = savingsPocketsRepository.findByUser_UsernameAndAccount_IdAndId(user.getUsername(), idAccount, idPocket)
-                    .orElseThrow(() -> new EntityNotFoundException("Pocket not found"));
-            pocket = savingsPocketConverter.updatePocketConverter(pocket, request);
-            return mainResponse.success(pocket);
-        } catch (RuntimeException e) {
-            return mainResponse.clientError(e.getMessage(), request);
-        } catch (Exception e) {
-            return mainResponse.serverError(e.getMessage());
-        }
-    }
-
-    public ResponseEntity<AppResponse> updatePocketAmount(Long idAccount, Long idPocket, Double change) {
-        try {
-            if (change == 0D) {
-                throw new ValidationException("Invalid change amount", new Object[]{change});
+            SavingsPockets pocket = null;
+            if (request.getPocketId() != null) {
+                pocket = savingsPocketsRepository.findByUser_UsernameAndAccount_IdAndId(user.getUsername(), idAccount, request.getPocketId())
+                        .orElseThrow(() -> new EntityNotFoundException("Pocket not found"));
             }
-            User user = userService.getAuthenticatedUser();
-            SavingsAccount account = savingsAccountRepository.findByIdAndUser_Username(idAccount, user.getUsername())
-                    .orElseThrow(() -> new EntityNotFoundException("Account not found"));
-            SavingsPockets pocket = savingsPocketsRepository.findByUser_UsernameAndAccount_IdAndId(user.getUsername(), idAccount, idPocket)
-                    .orElseThrow(() -> new EntityNotFoundException("Pocket not found"));
-            pocket = savingsPocketConverter.updateAmountConverter(pocket, change);
-            return mainResponse.success(pocket);
+            Transactions transaction = transactionsRepository.findByUser_UsernameAndAccount_IdAndId(user.getUsername(), idAccount, idTransact)
+                    .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
+            transaction = transactionConverter.updateTransactionConverter(request, transaction, pocket);
+            Double change = (request.getAmount() * request.getType()) - (transaction.getAmount() * transaction.getType().getCode());
+            updateAccountAndPocket(account, pocket, change);
+            return mainResponse.success(transaction);
         } catch (RuntimeException e) {
-            return mainResponse.clientError(e.getMessage(), change);
+            return mainResponse.clientError(e.getMessage(), request);
         } catch (Exception e) {
             return mainResponse.serverError(e.getMessage());
         }
     }
 
-    public ResponseEntity<AppResponse> deletePocket(Long idAccount, Long idPocket) {
+    public ResponseEntity<AppResponse> deleteTransaction(Long idAccount, String idTransact) {
         try {
-            SavingsPockets pocket = savingsPocketsRepository.findByUser_UsernameAndAccount_IdAndId(userService.getAuthenticatedUser().getUsername(), idAccount, idPocket)
-                    .orElseThrow(() -> new EntityNotFoundException("Pocket not found"));
-            pocket = savingsPocketsRepository.save(pocket);
-            return mainResponse.success(pocket);
+            User user = userService.getAuthenticatedUser();
+            Transactions transaction = transactionsRepository.findByUser_UsernameAndAccount_IdAndId(user.getUsername(), idAccount, idTransact)
+                    .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
+            transaction = transactionConverter.deleteTransactionConverter(transaction);
+            transaction = transactionsRepository.save(transaction);
+            return mainResponse.success(transaction);
         } catch (RuntimeException e) {
-            return mainResponse.clientError(e.getMessage(), idPocket);
+            return mainResponse.clientError(e.getMessage(), idTransact);
         } catch (Exception e) {
             return mainResponse.serverError(e.getMessage());
         }
@@ -149,7 +130,7 @@ public class TransactionService {
     public void updateAccountAndPocket(SavingsAccount account, SavingsPockets pocket, Double change) {
         accountService.updateAccountAmount(account, change);
         if (pocket != null) {
-            pocketService.updatePocketAmount(account, pocket, change);
+            pocketService.updatePocketAmount(pocket, change);
         }
     }
 }
