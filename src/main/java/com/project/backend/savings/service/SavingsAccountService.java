@@ -96,8 +96,7 @@ public class SavingsAccountService {
             }
             SavingsAccount account = savingsAccountRepository.findByIdAndUser_Username(id, userService.getAuthenticatedUser().getUsername())
                     .orElseThrow(() -> new EntityNotFoundException("Account not found"));
-            account = savingsAccountConverter.updateAmountConverter(account, change);
-            account = savingsAccountRepository.save(account);
+            account = updateAccountAmount(account, change);
             return mainResponse.success(account);
         } catch (RuntimeException e) {
             return mainResponse.clientError(e.getMessage(), change);
@@ -118,5 +117,11 @@ public class SavingsAccountService {
         } catch (Exception e) {
             return mainResponse.serverError(e.getMessage());
         }
+    }
+
+    public SavingsAccount updateAccountAmount(SavingsAccount account, Double change){
+        account = savingsAccountConverter.updateAmountConverter(account, change);
+        account = savingsAccountRepository.save(account);
+        return account;
     }
 }

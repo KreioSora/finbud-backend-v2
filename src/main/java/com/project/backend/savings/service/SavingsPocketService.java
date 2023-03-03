@@ -37,7 +37,7 @@ public class SavingsPocketService {
     private final SavingsPocketsRepository savingsPocketsRepository;
     private final SavingsAccountRepository savingsAccountRepository;
 
-    public ResponseEntity<AppResponse> accountPocket(Integer page, Integer pageSize, String query, Long id) {
+    public ResponseEntity<AppResponse> accountPocket(Integer page, Integer pageSize, Long id) {
         try {
             Pageable pageable = PageRequest.of(page, pageSize, Sort.by("created_at").descending());
             Page<SavingsPockets> pocket = savingsPocketsRepository.findAllByUser_UsernameAndAccount_Id(userService.getAuthenticatedUser().getUsername(), id, pageable)
@@ -86,8 +86,6 @@ public class SavingsPocketService {
             updatePocketValidator.validate(request, validation);
             if (validation.hasErrors()) throw new ValidationException("Invalid Request", validation);
             User user = userService.getAuthenticatedUser();
-            SavingsAccount account = savingsAccountRepository.findByIdAndUser_Username(idAccount, user.getUsername())
-                    .orElseThrow(() -> new EntityNotFoundException("Account not found"));
             SavingsPockets pocket = savingsPocketsRepository.findByUser_UsernameAndAccount_IdAndId(user.getUsername(), idAccount, idPocket)
                     .orElseThrow(() -> new EntityNotFoundException("Pocket not found"));
             pocket = savingsPocketConverter.updatePocketConverter(pocket, request);
@@ -105,11 +103,9 @@ public class SavingsPocketService {
                 throw new ValidationException("Invalid change amount", new Object[]{change});
             }
             User user = userService.getAuthenticatedUser();
-            SavingsAccount account = savingsAccountRepository.findByIdAndUser_Username(idAccount, user.getUsername())
-                    .orElseThrow(() -> new EntityNotFoundException("Account not found"));
             SavingsPockets pocket = savingsPocketsRepository.findByUser_UsernameAndAccount_IdAndId(user.getUsername(), idAccount, idPocket)
                     .orElseThrow(() -> new EntityNotFoundException("Pocket not found"));
-            return updatePocketAmount(account, pocket, change);
+            return updatePocketAmount(pocket, change);
         } catch (RuntimeException e) {
             return mainResponse.clientError(e.getMessage(), change);
         } catch (Exception e) {
@@ -117,9 +113,9 @@ public class SavingsPocketService {
         }
     }
 
-    public ResponseEntity<AppResponse> updatePocketAmount(SavingsAccount account, SavingsPockets pocket, Double change) {
+    public ResponseEntity<AppResponse> updatePocketAmount(SavingsPockets pocket, Double change) {
         pocket = savingsPocketConverter.updateAmountConverter(pocket, change);
-        savingsPocketsRepository.save(pocket);
+        pocket = savingsPocketsRepository.save(pocket);
         return mainResponse.success(pocket);
     }
 
