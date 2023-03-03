@@ -32,8 +32,6 @@ import java.time.format.DateTimeFormatter;
 @Service
 @AllArgsConstructor
 public class TransactionService {
-
-    private final Validation validation;
     private final UserService userService;
     private final MainResponse mainResponse;
     private final SavingsPocketService pocketService;
@@ -79,7 +77,7 @@ public class TransactionService {
 
     public ResponseEntity<AppResponse> createTransaction(Long idAccount, TransactionCreateRequest request) {
         try {
-            validation.validateRequest(request, "Create Transaction Request", transactionValidator);
+            Validation.validateRequest(request, "Create Transaction Request", transactionValidator);
             User user = userService.getAuthenticatedUser();
             SavingsAccount account = savingsAccountRepository.findByIdAndUser_Username(idAccount, user.getUsername())
                     .orElseThrow(() -> new EntityNotFoundException("Account not found"));
@@ -101,7 +99,7 @@ public class TransactionService {
 
     public ResponseEntity<AppResponse> updateTransaction(Long idAccount, String idTransact, TransactionUpdateRequest request) {
         try {
-            validation.validateRequest(request, "Update Transaction Reqeust", transactionValidator);
+            Validation.validateRequest(request, "Update Transaction Reqeust", transactionValidator);
             User user = userService.getAuthenticatedUser();
             SavingsAccount account = savingsAccountRepository.findByIdAndUser_Username(idAccount, user.getUsername())
                     .orElseThrow(() -> new EntityNotFoundException("Account not found"));

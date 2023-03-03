@@ -3,6 +3,7 @@ package com.project.backend.savings.service;
 import com.project.backend.common.exceptions.ValidationException;
 import com.project.backend.common.models.AppResponse;
 import com.project.backend.common.response.MainResponse;
+import com.project.backend.common.validation.Validation;
 import com.project.backend.savings.converter.SavingsPocketConverter;
 import com.project.backend.savings.models.SavingsAccount;
 import com.project.backend.savings.models.SavingsPockets;
@@ -22,13 +23,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.BeanPropertyBindingResult;
-import org.springframework.validation.Errors;
 
 @Service
 @AllArgsConstructor
 public class SavingsPocketService {
-
     private final UserService userService;
     private final MainResponse mainResponse;
     private final CreatePocketValidator createPocketValidator;
@@ -64,9 +62,7 @@ public class SavingsPocketService {
 
     public ResponseEntity<AppResponse> addPocket(Long idAccount, PocketCreateRequest request) {
         try {
-            Errors validation = new BeanPropertyBindingResult(request, "Create Pocket Request");
-            createPocketValidator.validate(request, validation);
-            if (validation.hasErrors()) throw new ValidationException("Invalid Request", validation);
+            Validation.validateRequest(request, "Create Pocket Request", createPocketValidator);
             User user = userService.getAuthenticatedUser();
             SavingsAccount account = savingsAccountRepository.findByIdAndUser_Username(idAccount, user.getUsername())
                     .orElseThrow(() -> new EntityNotFoundException("Account not found"));
@@ -82,9 +78,7 @@ public class SavingsPocketService {
 
     public ResponseEntity<AppResponse> updatePocket(Long idAccount, Long idPocket, PocketUpdateRequest request) {
         try {
-            Errors validation = new BeanPropertyBindingResult(request, "Update Pocket Request");
-            updatePocketValidator.validate(request, validation);
-            if (validation.hasErrors()) throw new ValidationException("Invalid Request", validation);
+            Validation.validateRequest(request, "Update Pocket Request", updatePocketValidator);
             User user = userService.getAuthenticatedUser();
             SavingsPockets pocket = savingsPocketsRepository.findByUser_UsernameAndAccount_IdAndId(user.getUsername(), idAccount, idPocket)
                     .orElseThrow(() -> new EntityNotFoundException("Pocket not found"));

@@ -3,6 +3,7 @@ package com.project.backend.savings.service;
 import com.project.backend.common.exceptions.ValidationException;
 import com.project.backend.common.models.AppResponse;
 import com.project.backend.common.response.MainResponse;
+import com.project.backend.common.validation.Validation;
 import com.project.backend.savings.converter.SavingsAccountConverter;
 import com.project.backend.savings.models.SavingsAccount;
 import com.project.backend.savings.models.requests.AccountCreateRequest;
@@ -20,8 +21,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.BeanPropertyBindingResult;
-import org.springframework.validation.Errors;
 
 @Service
 @AllArgsConstructor
@@ -38,7 +37,7 @@ public class SavingsAccountService {
             Pageable pageable = PageRequest.of(page, pageSize, Sort.by("savings_name").ascending());
             User user = userService.getAuthenticatedUser();
             Page<SavingsAccount> account;
-            if (nameQuery == null){
+            if (nameQuery == null) {
                 account = savingsAccountRepository.findAllByUser_Username(user.getUsername(), pageable)
                         .orElseThrow(() -> new EntityNotFoundException("No account found"));
             } else {
@@ -67,9 +66,7 @@ public class SavingsAccountService {
 
     public ResponseEntity<AppResponse> createAccount(AccountCreateRequest request) {
         try {
-            Errors validation = new BeanPropertyBindingResult(request, "Create Account Request");
-            createAccountValidator.validate(request, validation);
-            if (validation.hasErrors()) throw new ValidationException("Invalid Request", validation);
+            Validation.validateRequest(request, "Create Account Request", createAccountValidator);
             SavingsAccount account = savingsAccountConverter.createAccountConverter(request, userService.getAuthenticatedUser());
             account = savingsAccountRepository.save(account);
             return mainResponse.success(account);
@@ -82,9 +79,7 @@ public class SavingsAccountService {
 
     public ResponseEntity<AppResponse> updateAccount(Long id, AccountUpdateRequest request) {
         try {
-            Errors validation = new BeanPropertyBindingResult(request, "Update Account Request");
-            updateAccountValidator.validate(request, validation);
-            if (validation.hasErrors()) throw new ValidationException("Invalid Request", validation);
+            Validation.validateRequest(request, "Update Account Request", updateAccountValidator);
             SavingsAccount account = savingsAccountRepository.findByIdAndUser_Username(id, userService.getAuthenticatedUser().getUsername())
                     .orElseThrow(() -> new EntityNotFoundException("Account not found"));
             account = savingsAccountConverter.updateAccountConverter(account, request);
@@ -99,7 +94,7 @@ public class SavingsAccountService {
 
     public ResponseEntity<AppResponse> updateAccountAmount(Long id, Double change) {
         try {
-            if (change == 0D){
+            if (change == 0D) {
                 throw new ValidationException("Invalid change amount", new Object[]{change});
             }
             SavingsAccount account = savingsAccountRepository.findByIdAndUser_Username(id, userService.getAuthenticatedUser().getUsername())
@@ -127,7 +122,7 @@ public class SavingsAccountService {
         }
     }
 
-    public SavingsAccount updateAccountAmount(SavingsAccount account, Double change){
+    public SavingsAccount updateAccountAmount(SavingsAccount account, Double change) {
         account = savingsAccountConverter.updateAmountConverter(account, change);
         account = savingsAccountRepository.save(account);
         return account;
