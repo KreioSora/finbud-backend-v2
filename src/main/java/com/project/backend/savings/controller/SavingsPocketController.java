@@ -3,10 +3,7 @@ package com.project.backend.savings.controller;
 import com.project.backend.common.models.AppResponse;
 import com.project.backend.savings.models.requests.PocketCreateRequest;
 import com.project.backend.savings.models.requests.PocketUpdateRequest;
-import com.project.backend.savings.models.requests.SavingsCreateRequest;
-import com.project.backend.savings.models.requests.SavingsUpdateRequest;
 import com.project.backend.savings.service.SavingsPocketService;
-import com.project.backend.savings.service.SavingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,10 +18,9 @@ public class SavingsPocketController {
 
     @GetMapping("/{idAccount}/pockets")
     public ResponseEntity<AppResponse> accountPocket(@RequestParam(required = false, defaultValue = "0", value = "page") Integer page,
-                                                        @RequestParam(required = false, defaultValue = "10", value = "pageSize") Integer pageSize,
-                                                        @RequestParam(required = false, defaultValue = "", value = "nameQuery") String nameQuery,
-                                                        @PathVariable Long idAccount) {
-        return savingsPocketService.accountPocket(page, pageSize, nameQuery.equals("") ? null : nameQuery, idAccount);
+                                                     @RequestParam(required = false, defaultValue = "10", value = "pageSize") Integer pageSize,
+                                                     @PathVariable Long idAccount) {
+        return savingsPocketService.accountPocket(page, pageSize, idAccount);
     }
 
     @GetMapping("/{idAccount}/pockets/{idPocket}")
@@ -48,8 +44,8 @@ public class SavingsPocketController {
 
     @PatchMapping("/{idAccount}/pockets/{idPocket}/amount")
     public ResponseEntity<AppResponse> updatePocketAmount(@PathVariable Long idAccount,
-                                                    @PathVariable Long idPocket,
-                                                    @RequestBody Double change) {
+                                                          @PathVariable Long idPocket,
+                                                          @RequestBody Double change) {
         return savingsPocketService.updatePocketAmount(idAccount, idPocket, change);
     }
 
