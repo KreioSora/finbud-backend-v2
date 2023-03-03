@@ -13,6 +13,8 @@ public interface SavingsAccountRepository extends JpaRepository<SavingsAccount, 
 
     Optional<SavingsAccount> findByIdAndUser_Username(Long id, String username);
 
+    Optional<Page<SavingsAccount>> findAllByUser_Username(String username, Pageable pageable);
+
     Optional<Page<SavingsAccount>> findAllByUser_UsernameAndSavings_Name(String username, String name, Pageable pageable);
 
 }

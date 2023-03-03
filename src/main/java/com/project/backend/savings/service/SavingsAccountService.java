@@ -11,6 +11,7 @@ import com.project.backend.savings.repository.SavingsAccountRepository;
 import com.project.backend.savings.validation.accounts.CreateAccountValidator;
 import com.project.backend.savings.validation.accounts.UpdateAccountValidator;
 import com.project.backend.user.UserService;
+import com.project.backend.user.models.User;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -35,8 +36,15 @@ public class SavingsAccountService {
     public ResponseEntity<AppResponse> dashboard(Integer page, Integer pageSize, String nameQuery) {
         try {
             Pageable pageable = PageRequest.of(page, pageSize, Sort.by("savings_name").ascending());
-            Page<SavingsAccount> account = savingsAccountRepository.findAllByUser_UsernameAndSavings_Name(userService.getAuthenticatedUser().getUsername(), nameQuery, pageable)
-                    .orElseThrow(() -> new EntityNotFoundException("No account found"));
+            User user = userService.getAuthenticatedUser();
+            Page<SavingsAccount> account;
+            if (nameQuery == null){
+                account = savingsAccountRepository.findAllByUser_Username(user.getUsername(), pageable)
+                        .orElseThrow(() -> new EntityNotFoundException("No account found"));
+            } else {
+                account = savingsAccountRepository.findAllByUser_UsernameAndSavings_Name(user.getUsername(), nameQuery, pageable)
+                        .orElseThrow(() -> new EntityNotFoundException("No account found"));
+            }
             return mainResponse.success(account);
         } catch (RuntimeException e) {
             return mainResponse.clientError(e.getMessage());
