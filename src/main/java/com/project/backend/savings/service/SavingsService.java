@@ -14,6 +14,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -29,10 +30,17 @@ public class SavingsService {
 
     public ResponseEntity<AppResponse> dashboard(Integer page, Integer pageSize, String nameQuery) {
         try {
-            Page<Savings> savings = savingsRepository.findAll(PageRequest.of(page, pageSize, Sort.by("name").ascending()));
+            Pageable pageable = PageRequest.of(page, pageSize, Sort.by("name").ascending());
+            Page<Savings> savings;
+            if(nameQuery == null) {
+                savings = savingsRepository.findAll(pageable);
+            } else {
+                savings = savingsRepository.findAllByCodeStartingWith(nameQuery, pageable)
+                        .orElseThrow(() -> new EntityNotFoundException("Savings not found"));
+            }
             return mainResponse.success(savings);
         } catch (RuntimeException e) {
-            return mainResponse.clientError(e.getMessage());
+            return mainResponse.clientError(e.getMessage(), nameQuery);
         } catch (Exception e) {
             return mainResponse.serverError(e.getMessage());
         }
