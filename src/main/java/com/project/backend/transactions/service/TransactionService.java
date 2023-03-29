@@ -99,7 +99,7 @@ public class TransactionService {
 
     public ResponseEntity<AppResponse> updateTransaction(Long idAccount, String idTransact, TransactionUpdateRequest request) {
         try {
-            Validation.validateRequest(request, "Update Transaction Reqeust", transactionValidator);
+            Validation.validateRequest(request, "Update Transaction Request", transactionValidator);
             User user = userService.getAuthenticatedUser();
             SavingsAccount account = savingsAccountRepository.findByIdAndUser_Username(idAccount, user.getUsername())
                     .orElseThrow(() -> new EntityNotFoundException("Account not found"));
