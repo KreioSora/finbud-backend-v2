@@ -18,6 +18,8 @@ public class TransactionUpdateRequest {
 
     private String currency;
 
+    private String category;
+
     private Double amount;
 
     private Integer type;

@@ -34,6 +34,9 @@ public class Transactions {
     @ManyToOne
     private SavingsPockets pockets;
 
+    @ManyToOne
+    private TransactionCategory category;
+
     private String currency;
 
     private Double amount;

@@ -10,9 +10,11 @@ import com.project.backend.savings.repository.SavingsPocketsRepository;
 import com.project.backend.savings.service.SavingsAccountService;
 import com.project.backend.savings.service.SavingsPocketService;
 import com.project.backend.transactions.converter.TransactionConverter;
+import com.project.backend.transactions.models.TransactionCategory;
 import com.project.backend.transactions.models.Transactions;
 import com.project.backend.transactions.models.requests.TransactionCreateRequest;
 import com.project.backend.transactions.models.requests.TransactionUpdateRequest;
+import com.project.backend.transactions.repository.TransactionCategoryRepository;
 import com.project.backend.transactions.repository.TransactionsRepository;
 import com.project.backend.transactions.validation.TransactionValidator;
 import com.project.backend.user.UserService;
@@ -41,6 +43,7 @@ public class TransactionService {
     private final TransactionsRepository transactionsRepository;
     private final SavingsPocketsRepository savingsPocketsRepository;
     private final SavingsAccountRepository savingsAccountRepository;
+    private final TransactionCategoryRepository transactionCategoryRepository;
 
     public ResponseEntity<AppResponse> dashboard(Integer page, Integer pageSize, String dateQuery, Long accountId) {
         try {
@@ -86,7 +89,8 @@ public class TransactionService {
                 pocket = savingsPocketsRepository.findByUser_UsernameAndAccount_IdAndId(user.getUsername(), idAccount, request.getPocketId())
                         .orElseThrow(() -> new EntityNotFoundException("Pocket not found"));
             }
-            Transactions transaction = transactionConverter.createTransactionConverter(request, user, account, pocket);
+            TransactionCategory category = transactionCategoryRepository.getReferenceById(request.getCategory());
+            Transactions transaction = transactionConverter.createTransactionConverter(request, user, account, pocket, category);
             transaction = transactionsRepository.save(transaction);
             updateAccountAndPocket(account, pocket, request.getAmount() * request.getType().doubleValue());
             return mainResponse.success(transaction);
@@ -110,7 +114,8 @@ public class TransactionService {
             }
             Transactions transaction = transactionsRepository.findByUser_UsernameAndAccount_IdAndId(user.getUsername(), idAccount, idTransact)
                     .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
-            transaction = transactionConverter.updateTransactionConverter(request, transaction, pocket);
+            TransactionCategory category = transactionCategoryRepository.getReferenceById(request.getCategory());
+            transaction = transactionConverter.updateTransactionConverter(request, transaction, pocket, category);
             Double change = (request.getAmount() * request.getType()) - (transaction.getAmount() * transaction.getType().getCode());
             updateAccountAndPocket(account, pocket, change);
             return mainResponse.success(transaction);

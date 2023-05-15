@@ -20,6 +20,8 @@ public class TransactionCreateRequest {
 
     private String currency;
 
+    private String category;
+
     private Double amount;
 
     private Integer type;
